@@ -26,15 +26,15 @@ struct SwipeDeckView: View {
             ZStack(alignment: .bottomLeading) {
                 if let displayedNextProduct {
                     ProductCardView(product: displayedNextProduct)
-                        .scaleEffect(nextCardScale)
-                        .offset(y: nextCardYOffset)
-                        .opacity(nextCardOpacity)
+                        .transaction { transaction in
+                            transaction.animation = nil
+                        }
                         .allowsHitTesting(false)
                 }
 
                 ProductCardView(product: product, isOpaque: true)
-                    .overlay(alignment: .bottomLeading) {
-                        swipeOverlay
+                    .overlay {
+                        cardOverlayChrome
                     }
                     .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                     .offset(x: dragOffset.width, y: dragOffset.height)
@@ -69,11 +69,11 @@ struct SwipeDeckView: View {
             .onAppear {
                 displayedNextProduct = nextProduct
             }
-            .onChange(of: product.id) { _ in
+            .onChange(of: product.id) {
                 resetInteractionState(disableAnimations: true)
                 displayedNextProduct = nextProduct
             }
-            .onChange(of: nextProduct?.id) { _ in
+            .onChange(of: nextProduct?.id) {
                 guard !isInteracting else { return }
                 displayedNextProduct = nextProduct
             }
@@ -82,52 +82,78 @@ struct SwipeDeckView: View {
                     displayedNextProduct = nextProduct
                 }
             }
+        }
+    }
 
-            SwipeActionButtons(
-                onPass: {
-                    triggerDecision(.pass)
-                },
-                onSave: {
-                    triggerDecision(.save)
-                },
-                onLike: {
-                    triggerDecision(.like)
+    @ViewBuilder
+    private var cardOverlayChrome: some View {
+        ZStack {
+            swipeOverlay
+            actionControlsOverlay
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    private var actionControlsOverlay: some View {
+        GeometryReader { geometry in
+            let gradientHeight = max(geometry.size.height * 0.22, 110)
+
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+                ZStack(alignment: .bottom) {
+                    LinearGradient(
+                        colors: [
+                            Color.black.opacity(0.5),
+                            Color.black.opacity(0.24),
+                            Color.black.opacity(0)
+                        ],
+                        startPoint: .bottom,
+                        endPoint: .top
+                    )
+                    .allowsHitTesting(false)
+
+                    SwipeActionButtons(
+                        onPass: { triggerDecision(.pass) },
+                        onSave: { triggerDecision(.save) },
+                        onLike: { triggerDecision(.like) }
+                    )
+                    .padding(.bottom, 14)
+                    .padding(.horizontal, 18)
+                    .opacity(actionControlsOpacity)
+                    .offset(y: actionControlsOffsetY)
+                    .scaleEffect(0.98 + (CGFloat(actionControlsOpacity) * 0.02))
+                    .animation(.easeOut(duration: 0.15), value: actionControlsOpacity)
+                    .allowsHitTesting(actionControlsOpacity > 0.05 && !isAnimatingOut)
                 }
-            )
-            .padding(.bottom, 6)
+                .frame(height: gradientHeight)
+            }
         }
     }
 
     @ViewBuilder
     private var swipeOverlay: some View {
         if let style = overlayStyle {
-            VStack(alignment: .leading, spacing: 6) {
-                Image(systemName: style.iconName)
-                    .font(.title3.weight(.black))
-                Text(style.label)
-                    .font(.caption.weight(.semibold))
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.black.opacity(0.18))
-            )
-            .padding(18)
-            .background(
-                LinearGradient(
-                    colors: [
-                        style.color.opacity(0),
-                        style.color.opacity(overlayOpacity)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
+            ZStack(alignment: .bottomLeading) {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(style.color.opacity(overlayOpacity))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Image(systemName: style.iconName)
+                        .font(.title3.weight(.black))
+                    Text(style.label)
+                        .font(.caption.weight(.semibold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.black.opacity(0.22))
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-            )
+                .padding(18)
+            }
             .allowsHitTesting(false)
-            .animation(.easeOut(duration: 0.16), value: overlayOpacity)
+            .animation(.easeOut(duration: 0.12), value: overlayOpacity)
         }
     }
 
@@ -149,29 +175,24 @@ struct SwipeDeckView: View {
 
     private var overlayOpacity: Double {
         if activeDecision != nil {
-            return 0.72
+            return 0.4
         }
-        return min(Double(abs(dragOffset.width) / swipeThreshold), 0.85)
+        return min(Double(abs(dragOffset.width) / swipeThreshold), 0.42)
     }
 
-    private var dragProgress: CGFloat {
-        min(abs(dragOffset.width) / swipeThreshold, 1)
+    private var swipeInteractionProgress: CGFloat {
+        min(hypot(dragOffset.width, dragOffset.height) / 28, 1)
     }
 
-    private var nextCardScale: CGFloat {
-        0.95 + (revealProgress * 0.05)
+    private var actionControlsOpacity: Double {
+        if activeDecision != nil || isAnimatingOut {
+            return 0
+        }
+        return 1 - Double(swipeInteractionProgress)
     }
 
-    private var nextCardYOffset: CGFloat {
-        18 - (revealProgress * 18)
-    }
-
-    private var nextCardOpacity: Double {
-        0.78 + Double(revealProgress) * 0.22
-    }
-
-    private var revealProgress: CGFloat {
-        activeDecision == nil ? dragProgress : 1
+    private var actionControlsOffsetY: CGFloat {
+        CGFloat((1 - actionControlsOpacity) * 24)
     }
 
     private var isInteracting: Bool {
