@@ -59,6 +59,7 @@ extension SavedProduct {
             rating: rating,
             reviewCount: reviewCount,
             imageURL: imageURL,
+            thumbnailURLs: imageURL.map { [$0] } ?? [],
             productURL: productURL,
             reasonText: reasonText,
             tags: tags,

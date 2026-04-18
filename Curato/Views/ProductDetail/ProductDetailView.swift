@@ -3,6 +3,7 @@ import SwiftUI
 
 struct ProductDetailView: View {
     let product: Product
+    var onSave: ((Product) -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -75,14 +76,15 @@ struct ProductDetailView: View {
 
         modelContext.insert(SavedProduct.from(product: product))
 
-        if let profile = profiles.first, !profile.savedProductIDs.contains(product.id) {
-            profile.savedProductIDs.append(product.id)
+        if let profile = profiles.first {
+            profile.registerSave(product: product)
         }
 
         do {
             try modelContext.save()
             Haptic.success()
             saveMessage = "Saved to your collection"
+            onSave?(product)
         } catch {
             saveMessage = "Failed to save. Try again."
         }

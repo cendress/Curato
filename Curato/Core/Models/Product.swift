@@ -9,10 +9,47 @@ struct Product: Identifiable, Hashable, Codable {
     let rating: Double?
     let reviewCount: Int?
     let imageURL: String?
+    let thumbnailURLs: [String]
     let productURL: String?
+    let queryUsed: String?
+    let snippet: String?
     let reasonText: String?
     let tags: [String]
     let category: String?
+
+    init(
+        id: String,
+        title: String,
+        merchant: String,
+        price: Double? = nil,
+        originalPrice: Double? = nil,
+        rating: Double? = nil,
+        reviewCount: Int? = nil,
+        imageURL: String? = nil,
+        thumbnailURLs: [String] = [],
+        productURL: String? = nil,
+        queryUsed: String? = nil,
+        snippet: String? = nil,
+        reasonText: String? = nil,
+        tags: [String] = [],
+        category: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.merchant = merchant
+        self.price = price
+        self.originalPrice = originalPrice
+        self.rating = rating
+        self.reviewCount = reviewCount
+        self.imageURL = imageURL
+        self.thumbnailURLs = thumbnailURLs
+        self.productURL = productURL
+        self.queryUsed = queryUsed
+        self.snippet = snippet
+        self.reasonText = reasonText
+        self.tags = tags
+        self.category = category
+    }
 }
 
 extension Product {

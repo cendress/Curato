@@ -3,78 +3,123 @@ import Foundation
 
 @MainActor
 final class DiscoverViewModel: ObservableObject {
-    @Published private(set) var deck: [Product] = []
+    @Published private(set) var originalProducts: [Product] = []
+    @Published private(set) var rankedProducts: [Product] = []
     @Published var isLoading = false
+    @Published var errorMessage: String?
     @Published var filterOptions: FilterOptions
 
     private let apiClient: SerpAPIClient
     private let recommendationEngine: Recommending
+    private let gl: String
+    private let hl: String
 
     init(
         filterOptions: FilterOptions? = nil,
         apiClient: SerpAPIClient? = nil,
-        recommendationEngine: Recommending? = nil
+        recommendationEngine: Recommending? = nil,
+        gl: String = "us",
+        hl: String = "en"
     ) {
         self.filterOptions = filterOptions ?? FilterOptions()
-        self.apiClient = apiClient ?? PlaceholderSerpAPIClient()
+        self.apiClient = apiClient ?? LiveSerpAPIClient()
         self.recommendationEngine = recommendationEngine ?? RecommendationEngine()
+        self.gl = gl
+        self.hl = hl
     }
 
     var currentProduct: Product? {
-        deck.first
+        rankedProducts.first
     }
 
-    func loadProducts() async {
+    func configureFromSession(_ session: AppSessionState) {
+        filterOptions = FilterOptions(
+            vibeText: session.activeVibeText,
+            budgetMin: session.activeBudgetMin,
+            budgetMax: session.activeBudgetMax,
+            selectedCategories: Set(session.selectedCategories),
+            location: session.activeLocation
+        )
+    }
+
+    func loadProducts(session: AppSessionState, profile: UserPreferenceProfile?) async {
+        configureFromSession(session)
+        await loadProducts(profile: profile)
+    }
+
+    func loadProducts(profile: UserPreferenceProfile?) async {
         isLoading = true
+        errorMessage = nil
         defer { isLoading = false }
 
         do {
             let fetched = try await apiClient.searchProducts(
-                query: filterOptions.vibeText.isEmpty ? "curated shopping" : filterOptions.vibeText,
-                location: filterOptions.location,
-                limit: 20
+                vibeText: filterOptions.vibeText,
+                categories: filterOptions.selectedCategories.sorted(),
+                budgetMin: filterOptions.budgetMin,
+                budgetMax: filterOptions.budgetMax,
+                location: resolvedLocation,
+                gl: gl,
+                hl: hl
             )
 
-            let seed = fetched.isEmpty ? Product.mockDeck : fetched
-            deck = recommendationEngine.rank(products: seed, for: filterOptions)
+            originalProducts = fetched
+            rerankProducts(profile: profile)
 
-            if deck.isEmpty {
-                deck = Product.mockDeck
+            if rankedProducts.isEmpty {
+                errorMessage = "No products matched your current preferences. Try broadening your filters."
             }
+        } catch let error as SerpAPIClientError {
+            originalProducts = []
+            rankedProducts = []
+            errorMessage = error.errorDescription
         } catch {
-            deck = Product.mockDeck
+            originalProducts = []
+            rankedProducts = []
+            errorMessage = "Unexpected error: \(error.localizedDescription)"
         }
     }
 
-    func applyFilters(_ options: FilterOptions) {
+    func applyFilters(_ options: FilterOptions, profile: UserPreferenceProfile?) {
         filterOptions = options
+        rerankProducts(profile: profile)
     }
 
     func likeCurrent(profile: UserPreferenceProfile?) {
         guard let product = currentProduct else { return }
-        profile?.likedProductIDs.append(product.id)
-        adjustWeights(for: product, in: profile, isPositive: true)
-        deck.removeFirst()
+        profile?.registerLike(product: product)
+        rerankProducts(profile: profile)
         Haptic.light()
     }
 
     func skipCurrent(profile: UserPreferenceProfile?) {
         guard let product = currentProduct else { return }
-        profile?.skippedProductIDs.append(product.id)
-        adjustWeights(for: product, in: profile, isPositive: false)
-        deck.removeFirst()
+        profile?.registerSkip(product: product)
+        rerankProducts(profile: profile)
         Haptic.selection()
     }
 
-    private func adjustWeights(for product: Product, in profile: UserPreferenceProfile?, isPositive: Bool) {
-        guard let profile else { return }
+    func registerSave(_ product: Product, profile: UserPreferenceProfile?) {
+        profile?.registerSave(product: product)
+        rerankProducts(profile: profile)
+    }
 
-        for tag in product.tags {
-            if isPositive {
-                profile.positiveTagWeights[tag, default: 0] += 1
-            } else {
-                profile.negativeTagWeights[tag, default: 0] += 1
-            }
-        }
+    private var resolvedLocation: String {
+        let trimmed = filterOptions.location?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? "United States" : trimmed
+    }
+
+    private func rerankProducts(profile: UserPreferenceProfile?) {
+        let seenIDs = Set((profile?.likedProductIDs ?? []) + (profile?.skippedProductIDs ?? []) + (profile?.savedProductIDs ?? []))
+        let candidates = originalProducts.filter { !seenIDs.contains($0.id) }
+
+        rankedProducts = recommendationEngine.rerankProducts(
+            products: candidates,
+            profile: profile,
+            vibeText: filterOptions.vibeText,
+            selectedCategories: filterOptions.selectedCategories.sorted(),
+            budgetMin: filterOptions.budgetMin,
+            budgetMax: filterOptions.budgetMax
+        )
     }
 }

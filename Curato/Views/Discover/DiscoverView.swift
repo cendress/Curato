@@ -24,7 +24,7 @@ struct DiscoverView: View {
 
                 if viewModel.isLoading {
                     Spacer()
-                    LoadingView(title: "Loading your next picks...")
+                    LoadingView(title: "Loading live shopping results...")
                     Spacer()
                 } else if let current = viewModel.currentProduct {
                     SwipeDeckView(
@@ -58,13 +58,13 @@ struct DiscoverView: View {
                 } else {
                     Spacer()
                     EmptyStateView(
-                        iconName: "rectangle.stack.badge.person.crop",
-                        title: "You reached the end of the deck",
-                        subtitle: "Refresh to generate more personalized product cards.",
+                        iconName: viewModel.errorMessage == nil ? "rectangle.stack.badge.person.crop" : "exclamationmark.triangle",
+                        title: viewModel.errorMessage == nil ? "You reached the end of the deck" : "Couldn't load products",
+                        subtitle: viewModel.errorMessage ?? "Refresh to load more personalized product cards.",
                         actionTitle: "Refresh"
                     ) {
                         Task {
-                            await viewModel.loadProducts()
+                            await viewModel.loadProducts(session: session, profile: profile)
                         }
                     }
                     Spacer()
@@ -76,7 +76,10 @@ struct DiscoverView: View {
             .background(Color.appBackground)
         }
         .sheet(item: $selectedProduct) { product in
-            ProductDetailView(product: product)
+            ProductDetailView(product: product) { saved in
+                viewModel.registerSave(saved, profile: profile)
+                saveContext()
+            }
         }
         .sheet(isPresented: $isShowingFilterSheet) {
             FilterSheetView(initialOptions: viewModel.filterOptions) { newOptions in
@@ -86,26 +89,17 @@ struct DiscoverView: View {
                 session.selectedCategories = newOptions.selectedCategories.sorted()
                 session.activeLocation = newOptions.location
 
-                viewModel.applyFilters(newOptions)
+                viewModel.applyFilters(newOptions, profile: profile)
                 saveContext()
 
                 Task {
-                    await viewModel.loadProducts()
+                    await viewModel.loadProducts(session: session, profile: profile)
                 }
             }
         }
         .task {
-            if viewModel.currentProduct == nil {
-                viewModel.applyFilters(
-                    FilterOptions(
-                        vibeText: session.activeVibeText,
-                        budgetMin: session.activeBudgetMin,
-                        budgetMax: session.activeBudgetMax,
-                        selectedCategories: Set(session.selectedCategories),
-                        location: session.activeLocation
-                    )
-                )
-                await viewModel.loadProducts()
+            if viewModel.currentProduct == nil, !viewModel.isLoading {
+                await viewModel.loadProducts(session: session, profile: profile)
             }
         }
     }
