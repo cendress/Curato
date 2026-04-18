@@ -27,10 +27,6 @@ struct DiscoverView: View {
                 .ignoresSafeArea()
 
                 VStack(spacing: 16) {
-                    DeckHeaderView(vibeText: viewModel.currentVibeLabel) {
-                        isShowingFilterSheet = true
-                    }
-
                     if viewModel.isLoading {
                         Spacer()
                         LoadingView(title: "Loading live shopping results...")
@@ -71,6 +67,16 @@ struct DiscoverView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        isShowingFilterSheet = true
+                    } label: {
+                        Image(systemName: "slider.horizontal.3")
+                    }
+                    .accessibilityLabel("Refine feed")
+                }
             }
             .navigationBarTitleDisplayMode(.inline)
         }

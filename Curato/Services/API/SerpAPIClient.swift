@@ -45,6 +45,12 @@ final class LiveSerpAPIClient: SerpAPIClient {
     private let session: URLSession
     private let mapper: SerpAPIProductMapping
     private let baseURL = "https://serpapi.com/search"
+    private let apparelIntentKeywords = [
+        "apparel", "clothing", "fashion", "outfit", "outfits",
+        "dress", "top", "tops", "shirt", "jeans", "pants",
+        "shoes", "sneakers", "jacket", "coat", "hoodie",
+        "sweater", "skirt", "shorts", "outerwear", "accessories"
+    ]
 
     init(
         session: URLSession = .shared,
@@ -141,19 +147,39 @@ final class LiveSerpAPIClient: SerpAPIClient {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
 
+        let baseQuery: String
+
         if !trimmedVibe.isEmpty && !cleanedCategories.isEmpty {
-            return "\(trimmedVibe) \(cleanedCategories.joined(separator: " "))"
+            baseQuery = "\(trimmedVibe) \(cleanedCategories.joined(separator: " "))"
+        } else if !trimmedVibe.isEmpty {
+            baseQuery = trimmedVibe
+        } else if !cleanedCategories.isEmpty {
+            baseQuery = cleanedCategories.joined(separator: " ")
+        } else {
+            baseQuery = "fashion clothing apparel"
         }
 
-        if !trimmedVibe.isEmpty {
-            return trimmedVibe
+        return enforceApparelIntent(on: baseQuery)
+    }
+
+    private func enforceApparelIntent(on query: String) -> String {
+        let normalized = normalize(query)
+        let alreadyApparelFocused = apparelIntentKeywords.contains { keyword in
+            normalized.range(of: "\\b\(NSRegularExpression.escapedPattern(for: keyword))\\b", options: .regularExpression) != nil
         }
 
-        if !cleanedCategories.isEmpty {
-            return cleanedCategories.joined(separator: " ")
+        if alreadyApparelFocused {
+            return query
         }
 
-        return "fashion shopping"
+        return "\(query) clothing apparel"
+    }
+
+    private func normalize(_ value: String) -> String {
+        value
+            .lowercased()
+            .replacingOccurrences(of: "[^a-z0-9 ]+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func normalizedPriceValue(_ value: Double) -> String {
