@@ -9,11 +9,17 @@ import Testing
 @testable import Curato
 
 struct CuratoTests {
-
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
-        // Swift Testing Documentation
-        // https://developer.apple.com/documentation/testing
+    @Test func priceFormatterHandlesNilAndValues() {
+        #expect(PriceFormatter.string(from: nil) == "N/A")
+        #expect(PriceFormatter.string(from: 49).contains("$"))
     }
 
+    @Test func filterOptionsInitializeAsExpected() {
+        let options = FilterOptions()
+        #expect(options.vibeText.isEmpty)
+        #expect(options.budgetMin == nil)
+        #expect(options.budgetMax == nil)
+        #expect(options.selectedCategories.isEmpty)
+        #expect(options.location == nil)
+    }
 }

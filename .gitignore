@@ -7,6 +7,9 @@
 .AppleDouble
 .LSOverride
 
+# Secrets
+**/Secrets.swift
+
 # Icon must end with two \r
 Icon
 
