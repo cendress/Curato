@@ -31,6 +31,7 @@ struct SwipeDeckView: View {
     private let actionAreaHeight: CGFloat = 112
     private let deckTopInset: CGFloat = 12
     private let deckBottomInset: CGFloat = 20
+    private let actionControlsTransitionAnimation = Animation.easeOut(duration: 0.15)
 
     private struct OverlayStyle {
         let color: Color
@@ -181,7 +182,7 @@ struct SwipeDeckView: View {
                 .opacity(actionControlsOpacity)
                 .offset(y: actionControlsOffsetY)
                 .scaleEffect(0.98 + (CGFloat(actionControlsOpacity) * 0.02))
-                .animation(.easeOut(duration: 0.15), value: actionControlsOpacity)
+                .animation(actionControlsTransitionAnimation, value: actionControlsOpacity)
                 .allowsHitTesting(actionControlsOpacity > 0.05 && !isCurrentCardAnimatingOut)
             }
             .frame(height: actionAreaHeight)
@@ -366,7 +367,7 @@ struct SwipeDeckView: View {
             }
         }
 
-        withAnimation(.spring(response: 0.36, dampingFraction: 0.88)) {
+        withAnimation(actionControlsTransitionAnimation) {
             actionControlsRevealProgress = 1
         }
     }
