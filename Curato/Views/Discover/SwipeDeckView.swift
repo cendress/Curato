@@ -22,6 +22,8 @@ struct SwipeDeckView: View {
     @State private var dragOffset: CGSize = .zero
     @State private var activeDecision: DeckDecision?
     @State private var isAnimatingOut = false
+    @State private var animatingProductID: String?
+    @State private var isAwaitingDeckSwap = false
     @State private var displayedNextProduct: Product?
     @State private var actionControlsRevealProgress: Double = 0
 
@@ -70,10 +72,10 @@ struct SwipeDeckView: View {
                         cardOverlayChrome
                     }
                     .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                    .offset(x: dragOffset.width, y: dragOffset.height)
-                    .rotationEffect(.degrees(Double(dragOffset.width / 24)), anchor: .bottom)
+                    .offset(x: effectiveDragOffset.width, y: effectiveDragOffset.height)
+                    .rotationEffect(.degrees(Double(effectiveDragOffset.width / 24)), anchor: .bottom)
                     .onTapGesture {
-                        guard !isAnimatingOut else { return }
+                        guard !isCurrentCardAnimatingOut else { return }
                         onOpenDetail()
                     }
                     .zIndex(1)
@@ -82,11 +84,11 @@ struct SwipeDeckView: View {
                 .gesture(
                     DragGesture(minimumDistance: 8)
                         .onChanged { value in
-                            guard !isAnimatingOut else { return }
+                            guard !isCurrentCardAnimatingOut else { return }
                             dragOffset = value.translation
                         }
                         .onEnded { value in
-                            guard !isAnimatingOut else { return }
+                            guard !isCurrentCardAnimatingOut else { return }
                             let horizontalOffset = value.translation.width
                             if horizontalOffset <= -swipeThreshold {
                                 triggerDecision(.pass, source: .gesture)
@@ -102,20 +104,25 @@ struct SwipeDeckView: View {
                 )
                 .onAppear {
                     displayedNextProduct = nextProduct
+                    animatingProductID = nil
+                    isAwaitingDeckSwap = false
                     animateActionControlsIn(fromHidden: true)
                 }
                 .onChange(of: product.id) {
                     resetInteractionState(disableAnimations: true)
                     displayedNextProduct = nextProduct
+                    isAwaitingDeckSwap = false
                     animateActionControlsIn(fromHidden: true)
                 }
                 .onChange(of: nextProduct?.id) {
-                    guard !isInteracting else { return }
+                    guard !isInteracting, !isAwaitingDeckSwap else { return }
                     displayedNextProduct = nextProduct
                 }
                 .onChange(of: isInteracting) { interacting in
                     if !interacting {
-                        displayedNextProduct = nextProduct
+                        if !isAwaitingDeckSwap {
+                            displayedNextProduct = nextProduct
+                        }
                         animateActionControlsIn()
                     }
                 }
@@ -175,7 +182,7 @@ struct SwipeDeckView: View {
                 .offset(y: actionControlsOffsetY)
                 .scaleEffect(0.98 + (CGFloat(actionControlsOpacity) * 0.02))
                 .animation(.easeOut(duration: 0.15), value: actionControlsOpacity)
-                .allowsHitTesting(actionControlsOpacity > 0.05 && !isAnimatingOut)
+                .allowsHitTesting(actionControlsOpacity > 0.05 && !isCurrentCardAnimatingOut)
             }
             .frame(height: actionAreaHeight)
         }
@@ -213,36 +220,53 @@ struct SwipeDeckView: View {
     }
 
     private var overlayStyle: OverlayStyle? {
-        if let activeDecision {
-            return style(for: activeDecision)
+        if let effectiveActiveDecision {
+            return style(for: effectiveActiveDecision)
         }
 
-        if dragOffset.width <= -10 {
+        if effectiveDragOffset.width <= -10 {
             return style(for: .pass)
         }
 
-        if dragOffset.width >= 10 {
+        if effectiveDragOffset.width >= 10 {
             return style(for: .like)
         }
 
         return nil
     }
 
+    private var effectiveDragOffset: CGSize {
+        isStaleInteractionForCurrentCard ? .zero : dragOffset
+    }
+
+    private var effectiveActiveDecision: DeckDecision? {
+        isStaleInteractionForCurrentCard ? nil : activeDecision
+    }
+
+    private var isStaleInteractionForCurrentCard: Bool {
+        guard let animatingProductID else { return false }
+        return animatingProductID != product.id
+    }
+
+    private var isCurrentCardAnimatingOut: Bool {
+        isAnimatingOut && animatingProductID == product.id
+    }
+
     private var overlayOpacity: Double {
-        if activeDecision != nil {
+        if effectiveActiveDecision != nil {
             return 0.46
         }
 
-        let progress = min(Double(abs(dragOffset.width) / swipeThreshold), 1)
+        let progress = min(Double(abs(effectiveDragOffset.width) / swipeThreshold), 1)
         return min(pow(progress, 1.35) * 0.42, 0.42)
     }
 
     private var swipeInteractionProgress: CGFloat {
-        min(hypot(dragOffset.width, dragOffset.height) / 28, 1)
+        min(hypot(effectiveDragOffset.width, effectiveDragOffset.height) / 28, 1)
     }
 
     private var actionControlsOpacity: Double {
-        if activeDecision != nil || isAnimatingOut {
+        if effectiveActiveDecision != nil || isCurrentCardAnimatingOut {
             return 0
         }
         return (1 - Double(swipeInteractionProgress)) * actionControlsRevealProgress
@@ -252,25 +276,11 @@ struct SwipeDeckView: View {
         CGFloat((1 - actionControlsOpacity) * 24)
     }
 
-    private func animateActionControlsIn(fromHidden: Bool = false) {
-        if fromHidden {
-            var transaction = Transaction()
-            transaction.disablesAnimations = true
-            withTransaction(transaction) {
-                actionControlsRevealProgress = 0
-            }
-        }
-
-        withAnimation(.spring(response: 0.36, dampingFraction: 0.88)) {
-            actionControlsRevealProgress = 1
-        }
-    }
-
     private var isInteracting: Bool {
-        isAnimatingOut
-            || activeDecision != nil
-            || abs(dragOffset.width) > 0.5
-            || abs(dragOffset.height) > 0.5
+        isCurrentCardAnimatingOut
+            || effectiveActiveDecision != nil
+            || abs(effectiveDragOffset.width) > 0.5
+            || abs(effectiveDragOffset.height) > 0.5
     }
 
     private func style(for decision: DeckDecision) -> OverlayStyle {
@@ -285,10 +295,12 @@ struct SwipeDeckView: View {
     }
 
     private func triggerDecision(_ decision: DeckDecision, source: DecisionTriggerSource) {
-        guard !isAnimatingOut else { return }
+        guard !isCurrentCardAnimatingOut else { return }
 
+        animatingProductID = product.id
         isAnimatingOut = true
         activeDecision = decision
+        isAwaitingDeckSwap = true
 
         let destination: CGSize
         switch decision {
@@ -331,6 +343,8 @@ struct SwipeDeckView: View {
                 dragOffset = .zero
                 activeDecision = nil
                 isAnimatingOut = false
+                animatingProductID = nil
+                isAwaitingDeckSwap = false
                 actionControlsRevealProgress = 0
             }
             return
@@ -339,7 +353,24 @@ struct SwipeDeckView: View {
         dragOffset = .zero
         activeDecision = nil
         isAnimatingOut = false
+        animatingProductID = nil
+        isAwaitingDeckSwap = false
     }
+
+    private func animateActionControlsIn(fromHidden: Bool = false) {
+        if fromHidden {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                actionControlsRevealProgress = 0
+            }
+        }
+
+        withAnimation(.spring(response: 0.36, dampingFraction: 0.88)) {
+            actionControlsRevealProgress = 1
+        }
+    }
+
 }
 
 #Preview {
