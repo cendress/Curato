@@ -7,6 +7,11 @@ struct SwipeDeckView: View {
         case like
     }
 
+    private enum DecisionTriggerSource {
+        case gesture
+        case actionButton
+    }
+
     let product: Product
     let nextProduct: Product?
     var onPass: () -> Void
@@ -69,9 +74,9 @@ struct SwipeDeckView: View {
                         guard !isAnimatingOut else { return }
                         let horizontalOffset = value.translation.width
                         if horizontalOffset <= -swipeThreshold {
-                            triggerDecision(.pass)
+                            triggerDecision(.pass, source: .gesture)
                         } else if horizontalOffset >= swipeThreshold {
-                            triggerDecision(.like)
+                            triggerDecision(.like, source: .gesture)
                         } else {
                             withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) {
                                 dragOffset = .zero
@@ -124,9 +129,9 @@ struct SwipeDeckView: View {
                 .allowsHitTesting(false)
 
                 SwipeActionButtons(
-                    onPass: { triggerDecision(.pass) },
-                    onSave: { triggerDecision(.save) },
-                    onLike: { triggerDecision(.like) }
+                    onPass: { triggerDecision(.pass, source: .actionButton) },
+                    onSave: { triggerDecision(.save, source: .actionButton) },
+                    onLike: { triggerDecision(.like, source: .actionButton) }
                 )
                 .padding(.bottom, 14)
                 .padding(.horizontal, 18)
@@ -229,7 +234,7 @@ struct SwipeDeckView: View {
         }
     }
 
-    private func triggerDecision(_ decision: DeckDecision) {
+    private func triggerDecision(_ decision: DeckDecision, source: DecisionTriggerSource) {
         guard !isAnimatingOut else { return }
 
         isAnimatingOut = true
@@ -245,11 +250,15 @@ struct SwipeDeckView: View {
             destination = CGSize(width: 460, height: -10)
         }
 
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
+        let springResponse: Double = source == .actionButton ? 0.48 : 0.3
+        let springDamping: Double = source == .actionButton ? 0.9 : 0.86
+        let completionDelay: Double = source == .actionButton ? 0.32 : 0.2
+
+        withAnimation(.spring(response: springResponse, dampingFraction: springDamping)) {
             dragOffset = destination
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + completionDelay) {
             switch decision {
             case .pass:
                 onPass()
