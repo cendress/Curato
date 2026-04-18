@@ -154,6 +154,19 @@ final class OnboardingViewModel: ObservableObject {
         isSaving = true
         defer { isSaving = false }
 
+        applySelections(session: session, profile: profile)
+
+        do {
+            try modelContext.save()
+            Haptic.success()
+            return true
+        } catch {
+            assertionFailure("Failed to save onboarding state: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    func applySelections(session: AppSessionState, profile: UserPreferenceProfile?) {
         let budget = selectedBudgetPreset
 
         session.hasCompletedOnboarding = true
@@ -166,15 +179,6 @@ final class OnboardingViewModel: ObservableObject {
         if let profile {
             profile.preferredBudgetMin = budget.min
             profile.preferredBudgetMax = budget.max
-        }
-
-        do {
-            try modelContext.save()
-            Haptic.success()
-            return true
-        } catch {
-            assertionFailure("Failed to save onboarding state: \(error.localizedDescription)")
-            return false
         }
     }
 

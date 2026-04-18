@@ -5,6 +5,7 @@ struct DiscoverView: View {
     let session: AppSessionState
 
     @Environment(\.modelContext) private var modelContext
+    @Query private var savedProducts: [SavedProduct]
     @Query private var profiles: [UserPreferenceProfile]
 
     @StateObject private var viewModel = DiscoverViewModel()
@@ -17,69 +18,74 @@ struct DiscoverView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
-                DeckHeaderView(vibeText: session.activeVibeText, onTapFilter: {
-                    isShowingFilterSheet = true
-                })
+            ZStack {
+                LinearGradient(
+                    colors: [Color.appBackground, Color.appSurface.opacity(0.45)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-                if viewModel.isLoading {
-                    Spacer()
-                    LoadingView(title: "Loading live shopping results...")
-                    Spacer()
-                } else if let current = viewModel.currentProduct {
-                    SwipeDeckView(
-                        product: current,
-                        onLike: {
-                            viewModel.likeCurrent(profile: profile)
-                            saveContext()
-                        },
-                        onSkip: {
-                            viewModel.skipCurrent(profile: profile)
-                            saveContext()
-                        },
-                        onInfo: {
-                            selectedProduct = current
-                        }
-                    )
-
-                    SwipeActionButtons(
-                        onSkip: {
-                            viewModel.skipCurrent(profile: profile)
-                            saveContext()
-                        },
-                        onLike: {
-                            viewModel.likeCurrent(profile: profile)
-                            saveContext()
-                        },
-                        onInfo: {
-                            selectedProduct = current
-                        }
-                    )
-                } else {
-                    Spacer()
-                    EmptyStateView(
-                        iconName: viewModel.errorMessage == nil ? "rectangle.stack.badge.person.crop" : "exclamationmark.triangle",
-                        title: viewModel.errorMessage == nil ? "You reached the end of the deck" : "Couldn't load products",
-                        subtitle: viewModel.errorMessage ?? "Refresh to load more personalized product cards.",
-                        actionTitle: "Refresh"
-                    ) {
-                        Task {
-                            await viewModel.loadProducts(session: session, profile: profile)
-                        }
+                VStack(spacing: 16) {
+                    DeckHeaderView(vibeText: viewModel.currentVibeLabel) {
+                        isShowingFilterSheet = true
                     }
-                    Spacer()
+
+                    if viewModel.isLoading {
+                        Spacer()
+                        LoadingView(title: "Loading live shopping results...")
+                        Spacer()
+                    } else if let current = viewModel.currentProduct {
+                        SwipeDeckView(
+                            product: current,
+                            onPass: {
+                                viewModel.skipCurrent(profile: profile)
+                                saveContext()
+                            },
+                            onSave: {
+                                guard let productToSave = viewModel.currentProduct else { return }
+                                persistSave(productToSave)
+                            },
+                            onLike: {
+                                viewModel.likeCurrent(profile: profile)
+                                saveContext()
+                            },
+                            onOpenDetail: {
+                                selectedProduct = current
+                            }
+                        )
+                    } else {
+                        Spacer()
+                        EmptyStateView(
+                            iconName: viewModel.errorMessage == nil ? "rectangle.stack.badge.person.crop" : "exclamationmark.triangle",
+                            title: viewModel.errorMessage == nil ? "You reached the end of the deck" : "Couldn't load products",
+                            subtitle: viewModel.errorMessage ?? "Refresh to load more personalized product cards.",
+                            actionTitle: "Refresh"
+                        ) {
+                            Task {
+                                await viewModel.loadProducts(session: session, profile: profile)
+                            }
+                        }
+                        Spacer()
+                    }
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
             .navigationBarTitleDisplayMode(.inline)
-            .background(Color.appBackground)
         }
         .sheet(item: $selectedProduct) { product in
-            ProductDetailView(product: product) { saved in
-                viewModel.registerSave(saved, profile: profile)
-                saveContext()
-            }
+            ProductDetailView(
+                product: product,
+                onSaveStateChange: { _, _ in
+                    viewModel.refreshRanking(profile: profile)
+                },
+                onLike: { _ in
+                    viewModel.refreshRanking(profile: profile)
+                }
+            )
+            .presentationDragIndicator(.visible)
+            .presentationDetents([.large])
         }
         .sheet(isPresented: $isShowingFilterSheet) {
             FilterSheetView(initialOptions: viewModel.filterOptions) { newOptions in
@@ -96,12 +102,29 @@ struct DiscoverView: View {
                     await viewModel.loadProducts(session: session, profile: profile)
                 }
             }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .task {
             if viewModel.currentProduct == nil, !viewModel.isLoading {
                 await viewModel.loadProducts(session: session, profile: profile)
             }
         }
+    }
+
+    private func persistSave(_ product: Product) {
+        guard !isSaved(productID: product.id) else {
+            viewModel.refreshRanking(profile: profile)
+            return
+        }
+
+        modelContext.insert(SavedProduct.from(product: product))
+        viewModel.registerSave(product, profile: profile)
+        saveContext()
+    }
+
+    private func isSaved(productID: String) -> Bool {
+        savedProducts.contains(where: { $0.id == productID })
     }
 
     private func saveContext() {

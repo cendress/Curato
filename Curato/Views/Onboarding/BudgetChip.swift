@@ -9,17 +9,17 @@ struct BudgetChip: View {
         Button(action: onTap) {
             Text(title)
                 .font(.footnote.weight(.semibold))
-                .foregroundStyle(isSelected ? Color.appAccent : Color.white.opacity(0.9))
+                .foregroundStyle(isSelected ? Color.white : Color.primary.opacity(0.86))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(isSelected ? Color.white : Color.white.opacity(0.15))
+                        .fill(isSelected ? Color.appAccent : Color.white.opacity(0.7))
                 )
                 .overlay(
                     Capsule(style: .continuous)
-                        .strokeBorder(Color.white.opacity(isSelected ? 0 : 0.36), lineWidth: 1)
+                        .strokeBorder((isSelected ? Color.appAccent : Color.appBorder).opacity(isSelected ? 0 : 0.4), lineWidth: 1)
                 )
                 .animation(.spring(response: 0.3, dampingFraction: 0.85), value: isSelected)
         }
@@ -33,5 +33,5 @@ struct BudgetChip: View {
         BudgetChip(title: "No limit", isSelected: true, onTap: {})
     }
     .padding()
-    .background(Color.appAccent)
+    .background(Color.appBackground)
 }

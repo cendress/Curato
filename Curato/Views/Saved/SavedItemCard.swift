@@ -5,29 +5,59 @@ struct SavedItemCard: View {
     let savedDateText: String
 
     var body: some View {
-        HStack(spacing: 12) {
-            AsyncImageView(urlString: product.imageURL, height: 88)
-                .frame(width: 88)
+        HStack(spacing: 14) {
+            AsyncImageView(urlString: product.imageURL, height: 104)
+                .frame(width: 92)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(product.merchant)
                     .font(AppTypography.productBrand)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
 
                 Text(product.title)
-                    .font(AppTypography.productTitle)
+                    .font(AppTypography.productTitle.weight(.medium))
                     .lineLimit(2)
+                    .multilineTextAlignment(.leading)
 
-                Text(PriceFormatter.string(from: product.price))
-                    .font(AppTypography.productPrice)
+                HStack(spacing: 8) {
+                    Text(PriceFormatter.string(from: product.price))
+                        .font(AppTypography.productPrice)
+
+                    if let originalPrice = product.originalPrice, let price = product.price, originalPrice > price {
+                        Text(originalPrice.asCurrency)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .strikethrough()
+                    }
+                }
 
                 Text("Saved \(savedDateText)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Spacer()
+            Spacer(minLength: 0)
         }
-        .appCardStyle()
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.78))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.appBorder.opacity(0.35), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.07), radius: 12, y: 8)
     }
+}
+
+#Preview {
+    SavedItemCard(
+        product: SavedProduct.from(product: Product.mockDeck[0]),
+        savedDateText: "Apr 18, 2026"
+    )
+    .padding()
+    .background(Color.appBackground)
 }

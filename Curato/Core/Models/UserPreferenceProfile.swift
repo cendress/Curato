@@ -49,6 +49,10 @@ final class UserPreferenceProfile {
         applyWeightDelta(for: product, positiveDelta: 0.8, negativeDelta: -0.1)
     }
 
+    func unregisterSave(productID: String) {
+        savedProductIDs.removeAll { $0 == productID }
+    }
+
     private func applyWeightDelta(
         for product: Product,
         positiveDelta: Double,

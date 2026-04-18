@@ -32,6 +32,11 @@ final class DiscoverViewModel: ObservableObject {
         rankedProducts.first
     }
 
+    var currentVibeLabel: String {
+        let trimmed = filterOptions.vibeText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Curated just for you" : trimmed
+    }
+
     func configureFromSession(_ session: AppSessionState) {
         filterOptions = FilterOptions(
             vibeText: session.activeVibeText,
@@ -85,23 +90,42 @@ final class DiscoverViewModel: ObservableObject {
         rerankProducts(profile: profile)
     }
 
-    func likeCurrent(profile: UserPreferenceProfile?) {
+    func refreshRanking(profile: UserPreferenceProfile?) {
+        rerankProducts(profile: profile)
+    }
+
+    func likeCurrent(profile: UserPreferenceProfile?, includeHaptic: Bool = true) {
         guard let product = currentProduct else { return }
+        like(product: product, profile: profile, includeHaptic: includeHaptic)
+    }
+
+    func skipCurrent(profile: UserPreferenceProfile?, includeHaptic: Bool = true) {
+        guard let product = currentProduct else { return }
+        skip(product: product, profile: profile, includeHaptic: includeHaptic)
+    }
+
+    func like(product: Product, profile: UserPreferenceProfile?, includeHaptic: Bool = true) {
         profile?.registerLike(product: product)
         rerankProducts(profile: profile)
-        Haptic.light()
+        if includeHaptic {
+            Haptic.light()
+        }
     }
 
-    func skipCurrent(profile: UserPreferenceProfile?) {
-        guard let product = currentProduct else { return }
+    func skip(product: Product, profile: UserPreferenceProfile?, includeHaptic: Bool = true) {
         profile?.registerSkip(product: product)
         rerankProducts(profile: profile)
-        Haptic.selection()
+        if includeHaptic {
+            Haptic.selection()
+        }
     }
 
-    func registerSave(_ product: Product, profile: UserPreferenceProfile?) {
+    func registerSave(_ product: Product, profile: UserPreferenceProfile?, includeHaptic: Bool = true) {
         profile?.registerSave(product: product)
         rerankProducts(profile: profile)
+        if includeHaptic {
+            Haptic.success()
+        }
     }
 
     private var resolvedLocation: String {

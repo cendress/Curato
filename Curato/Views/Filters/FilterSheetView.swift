@@ -5,6 +5,12 @@ struct FilterSheetView: View {
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: FilterSheetViewModel
+    @FocusState private var focusedField: Field?
+
+    private enum Field {
+        case vibe
+        case location
+    }
 
     init(initialOptions: FilterOptions, onApply: @escaping (FilterOptions) -> Void) {
         self.onApply = onApply
@@ -13,92 +19,187 @@ struct FilterSheetView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Vibe") {
-                    TextField("Describe your vibe", text: $viewModel.workingOptions.vibeText)
+            ZStack {
+                LinearGradient(
+                    colors: [Color.appBackground, Color.appSurface.opacity(0.5)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(viewModel.vibeSuggestions, id: \.self) { vibe in
-                                VibeChip(title: vibe, isSelected: viewModel.workingOptions.vibeText == vibe) {
-                                    viewModel.workingOptions.vibeText = vibe
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 22) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Refine your feed")
+                                .font(AppTypography.sectionHeaderLarge)
+                            Text("Edit your vibe and preferences to refresh your product stream.")
+                                .font(AppTypography.recommendationReason)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        sectionCard(title: "Vibe") {
+                            TextField("Minimal spring outfits for NYC under $150", text: $viewModel.workingOptions.vibeText)
+                                .focused($focusedField, equals: .vibe)
+                                .textInputAutocapitalization(.sentences)
+                                .padding(12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .fill(Color.white.opacity(0.9))
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .stroke(Color.appBorder.opacity(0.3), lineWidth: 1)
+                                )
+
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 8)], spacing: 8) {
+                                ForEach(viewModel.vibeSuggestions, id: \.self) { vibe in
+                                    VibeChip(
+                                        title: vibe,
+                                        isSelected: viewModel.workingOptions.vibeText.localizedCaseInsensitiveContains(vibe)
+                                    ) {
+                                        viewModel.applyVibeSuggestion(vibe)
+                                        Haptic.selection()
+                                    }
                                 }
                             }
                         }
-                        .padding(.vertical, 4)
-                    }
-                }
 
-                Section("Budget") {
-                    HStack {
-                        Text("Min")
-                        Spacer()
-                        TextField(
-                            "$0",
-                            value: $viewModel.workingOptions.budgetMin,
-                            format: .number
-                        )
-                        .multilineTextAlignment(.trailing)
-                        .keyboardType(.decimalPad)
-                    }
+                        sectionCard(title: "Budget") {
+                            Text(viewModel.selectedBudgetPreset.label)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.appAccent)
 
-                    HStack {
-                        Text("Max")
-                        Spacer()
-                        TextField(
-                            "$0",
-                            value: $viewModel.workingOptions.budgetMax,
-                            format: .number
-                        )
-                        .multilineTextAlignment(.trailing)
-                        .keyboardType(.decimalPad)
-                    }
-                }
+                            Slider(
+                                value: $viewModel.selectedBudgetSliderValue,
+                                in: 0 ... 3,
+                                step: 1
+                            )
+                            .tint(Color.appAccent)
 
-                Section("Categories") {
-                    ForEach(viewModel.categorySuggestions, id: \.self) { category in
-                        Button {
-                            viewModel.toggleCategory(category)
-                        } label: {
-                            HStack {
-                                Text(category)
-                                Spacer()
-                                if viewModel.workingOptions.selectedCategories.contains(category) {
-                                    Image(systemName: "checkmark")
+                            HStack(spacing: 8) {
+                                ForEach(viewModel.budgetPresets) { preset in
+                                    BudgetChip(
+                                        title: preset.label,
+                                        isSelected: preset.id == viewModel.selectedBudgetPreset.id
+                                    ) {
+                                        viewModel.selectedBudgetSliderValue = preset.sliderValue
+                                    }
                                 }
                             }
                         }
-                        .foregroundStyle(.primary)
-                    }
-                }
 
-                Section("Location") {
-                    TextField("Optional location", text: Binding(
-                        get: { viewModel.workingOptions.location ?? "" },
-                        set: { viewModel.workingOptions.location = $0.isEmpty ? nil : $0 }
-                    ))
+                        sectionCard(title: "Categories") {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 8)], spacing: 8) {
+                                ForEach(viewModel.categorySuggestions, id: \.self) { category in
+                                    VibeChip(
+                                        title: category,
+                                        isSelected: viewModel.workingOptions.selectedCategories.contains(category)
+                                    ) {
+                                        viewModel.toggleCategory(category)
+                                    }
+                                }
+                            }
+                        }
+
+                        sectionCard(title: "Style framing") {
+                            Picker("Style framing", selection: $viewModel.selectedStyleFrame) {
+                                ForEach(FilterSheetViewModel.StyleFrame.allCases) { style in
+                                    Text(style.rawValue).tag(style)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                        }
+
+                        sectionCard(title: "Location") {
+                            TextField(
+                                "United States",
+                                text: Binding(
+                                    get: { viewModel.workingOptions.location ?? "" },
+                                    set: { viewModel.workingOptions.location = $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+                                )
+                            )
+                            .focused($focusedField, equals: .location)
+                            .textInputAutocapitalization(.words)
+                            .padding(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .fill(Color.white.opacity(0.9))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(Color.appBorder.opacity(0.3), lineWidth: 1)
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 18)
+                    .padding(.bottom, 120)
                 }
             }
-            .navigationTitle("Refine")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Clear") {
-                        viewModel.clear()
-                    }
-                }
-
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Apply") {
-                        onApply(viewModel.workingOptions)
+                    Button("Close") {
                         dismiss()
                     }
                     .font(AppTypography.navigationLabel)
                 }
             }
+            .safeAreaInset(edge: .bottom) {
+                HStack(spacing: 10) {
+                    Button("Reset") {
+                        viewModel.clear()
+                        Haptic.selection()
+                    }
+                    .font(AppTypography.buttonText)
+                    .foregroundStyle(Color.appAccent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Color.white.opacity(0.85))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.appBorder.opacity(0.35), lineWidth: 1)
+                    )
+
+                    PrimaryButton(title: "Apply") {
+                        focusedField = nil
+                        Haptic.light()
+                        onApply(viewModel.appliedOptions)
+                        dismiss()
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 10)
+                .background(.ultraThinMaterial)
+            }
         }
+    }
+
+    @ViewBuilder
+    private func sectionCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(AppTypography.sectionHeaderSmall)
+            content()
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.68))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.appBorder.opacity(0.3), lineWidth: 1)
+        )
     }
 }
 
 #Preview {
-    FilterSheetView(initialOptions: FilterOptions(), onApply: { _ in })
+    FilterSheetView(
+        initialOptions: FilterOptions(vibeText: "Minimal", budgetMin: nil, budgetMax: 150, selectedCategories: ["Tops"])
+    ) { _ in }
 }
