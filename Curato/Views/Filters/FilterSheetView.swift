@@ -9,7 +9,6 @@ struct FilterSheetView: View {
 
     private enum Field {
         case vibe
-        case location
     }
 
     init(initialOptions: FilterOptions, onApply: @escaping (FilterOptions) -> Void) {
@@ -89,15 +88,18 @@ struct FilterSheetView: View {
                         }
 
                         sectionCard(title: "Categories") {
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 8)], spacing: 8) {
-                                ForEach(viewModel.categorySuggestions, id: \.self) { category in
-                                    VibeChip(
-                                        title: category,
-                                        isSelected: viewModel.workingOptions.selectedCategories.contains(category)
-                                    ) {
-                                        viewModel.toggleCategory(category)
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(viewModel.categorySuggestions, id: \.self) { category in
+                                        VibeChip(
+                                            title: category,
+                                            isSelected: viewModel.workingOptions.selectedCategories.contains(category)
+                                        ) {
+                                            viewModel.toggleCategory(category)
+                                        }
                                     }
                                 }
+                                .padding(.vertical, 2)
                             }
                         }
 
@@ -110,26 +112,6 @@ struct FilterSheetView: View {
                             .pickerStyle(.segmented)
                         }
 
-                        sectionCard(title: "Location") {
-                            TextField(
-                                "United States",
-                                text: Binding(
-                                    get: { viewModel.workingOptions.location ?? "" },
-                                    set: { viewModel.workingOptions.location = $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
-                                )
-                            )
-                            .focused($focusedField, equals: .location)
-                            .textInputAutocapitalization(.words)
-                            .padding(12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(Color.white.opacity(0.9))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(Color.appBorder.opacity(0.3), lineWidth: 1)
-                            )
-                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 18)

@@ -7,7 +7,7 @@ final class FilterSheetViewModel: ObservableObject {
         case any = "Any"
         case masculine = "Masculine"
         case feminine = "Feminine"
-        case androgynous = "Androgynous"
+        case androgynous = "Unisex"
 
         var id: String { rawValue }
     }
