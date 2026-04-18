@@ -29,7 +29,7 @@ struct DiscoverView: View {
                 VStack(spacing: 16) {
                     if viewModel.isLoading {
                         Spacer()
-                        LoadingView(title: "Loading live shopping results...")
+                        LoadingView(title: "Curating your picks")
                         Spacer()
                     } else if let current = viewModel.currentProduct {
                         SwipeDeckView(
