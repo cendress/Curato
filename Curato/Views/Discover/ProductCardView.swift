@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProductCardView: View {
     let product: Product
+    var isOpaque: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -50,7 +51,7 @@ struct ProductCardView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.white.opacity(0.84))
+                .fill(Color.white.opacity(isOpaque ? 1 : 0.84))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)

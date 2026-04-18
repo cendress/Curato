@@ -8,6 +8,7 @@ struct SwipeDeckView: View {
     }
 
     let product: Product
+    let nextProduct: Product?
     var onPass: () -> Void
     var onSave: () -> Void
     var onLike: () -> Void
@@ -16,24 +17,34 @@ struct SwipeDeckView: View {
     @State private var dragOffset: CGSize = .zero
     @State private var activeDecision: DeckDecision?
     @State private var isAnimatingOut = false
+    @State private var displayedNextProduct: Product?
 
     private let swipeThreshold: CGFloat = 110
 
     var body: some View {
         VStack(spacing: 16) {
             ZStack(alignment: .bottomLeading) {
-                ProductCardView(product: product)
+                if let displayedNextProduct {
+                    ProductCardView(product: displayedNextProduct)
+                        .scaleEffect(nextCardScale)
+                        .offset(y: nextCardYOffset)
+                        .opacity(nextCardOpacity)
+                        .allowsHitTesting(false)
+                }
+
+                ProductCardView(product: product, isOpaque: true)
                     .overlay(alignment: .bottomLeading) {
                         swipeOverlay
                     }
                     .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .offset(x: dragOffset.width, y: dragOffset.height)
+                    .rotationEffect(.degrees(Double(dragOffset.width / 24)), anchor: .bottom)
                     .onTapGesture {
                         guard !isAnimatingOut else { return }
                         onOpenDetail()
                     }
+                    .zIndex(1)
             }
-            .offset(dragOffset)
-            .rotationEffect(.degrees(Double(dragOffset.width / 24)))
             .gesture(
                 DragGesture(minimumDistance: 8)
                     .onChanged { value in
@@ -55,6 +66,21 @@ struct SwipeDeckView: View {
                         }
                     }
             )
+            .onAppear {
+                displayedNextProduct = nextProduct
+            }
+            .onChange(of: product.id) { _ in
+                displayedNextProduct = nextProduct
+            }
+            .onChange(of: nextProduct?.id) { _ in
+                guard !isInteracting else { return }
+                displayedNextProduct = nextProduct
+            }
+            .onChange(of: isInteracting) { interacting in
+                if !interacting {
+                    displayedNextProduct = nextProduct
+                }
+            }
 
             SwipeActionButtons(
                 onPass: {
@@ -127,6 +153,33 @@ struct SwipeDeckView: View {
         return min(Double(abs(dragOffset.width) / swipeThreshold), 0.85)
     }
 
+    private var dragProgress: CGFloat {
+        min(abs(dragOffset.width) / swipeThreshold, 1)
+    }
+
+    private var nextCardScale: CGFloat {
+        0.95 + (revealProgress * 0.05)
+    }
+
+    private var nextCardYOffset: CGFloat {
+        18 - (revealProgress * 18)
+    }
+
+    private var nextCardOpacity: Double {
+        0.78 + Double(revealProgress) * 0.22
+    }
+
+    private var revealProgress: CGFloat {
+        activeDecision == nil ? dragProgress : 1
+    }
+
+    private var isInteracting: Bool {
+        isAnimatingOut
+            || activeDecision != nil
+            || abs(dragOffset.width) > 0.5
+            || abs(dragOffset.height) > 0.5
+    }
+
     private func style(for decision: DeckDecision) -> (color: Color, iconName: String, label: String) {
         switch decision {
         case .pass:
@@ -154,15 +207,11 @@ struct SwipeDeckView: View {
             destination = CGSize(width: 460, height: -10)
         }
 
-        withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
             dragOffset = destination
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) {
-            dragOffset = .zero
-            activeDecision = nil
-            isAnimatingOut = false
-
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             switch decision {
             case .pass:
                 onPass()
@@ -171,6 +220,12 @@ struct SwipeDeckView: View {
             case .like:
                 onLike()
             }
+
+            // If parent state did not replace the card, restore interaction state.
+            dragOffset = .zero
+            activeDecision = nil
+            isAnimatingOut = false
+            displayedNextProduct = nextProduct
         }
     }
 }
@@ -178,6 +233,7 @@ struct SwipeDeckView: View {
 #Preview {
     SwipeDeckView(
         product: Product.mockDeck[0],
+        nextProduct: Product.mockDeck[1],
         onPass: {},
         onSave: {},
         onLike: {},

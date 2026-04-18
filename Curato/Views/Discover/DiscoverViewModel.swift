@@ -32,6 +32,11 @@ final class DiscoverViewModel: ObservableObject {
         rankedProducts.first
     }
 
+    var nextProduct: Product? {
+        guard rankedProducts.count > 1 else { return nil }
+        return rankedProducts[1]
+    }
+
     var currentVibeLabel: String {
         let trimmed = filterOptions.vibeText.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? "Curated just for you" : trimmed
@@ -96,33 +101,49 @@ final class DiscoverViewModel: ObservableObject {
 
     func likeCurrent(profile: UserPreferenceProfile?, includeHaptic: Bool = true) {
         guard let product = currentProduct else { return }
-        like(product: product, profile: profile, includeHaptic: includeHaptic)
+        let anchoredNextID = nextProduct?.id
+        like(product: product, profile: profile, anchoredNextID: anchoredNextID, includeHaptic: includeHaptic)
     }
 
     func skipCurrent(profile: UserPreferenceProfile?, includeHaptic: Bool = true) {
         guard let product = currentProduct else { return }
-        skip(product: product, profile: profile, includeHaptic: includeHaptic)
+        let anchoredNextID = nextProduct?.id
+        skip(product: product, profile: profile, anchoredNextID: anchoredNextID, includeHaptic: includeHaptic)
     }
 
-    func like(product: Product, profile: UserPreferenceProfile?, includeHaptic: Bool = true) {
+    func like(
+        product: Product,
+        profile: UserPreferenceProfile?,
+        anchoredNextID: String? = nil,
+        includeHaptic: Bool = true
+    ) {
         profile?.registerLike(product: product)
         rerankProducts(profile: profile)
+        promoteToFrontIfPresent(productID: anchoredNextID)
         if includeHaptic {
             Haptic.light()
         }
     }
 
-    func skip(product: Product, profile: UserPreferenceProfile?, includeHaptic: Bool = true) {
+    func skip(
+        product: Product,
+        profile: UserPreferenceProfile?,
+        anchoredNextID: String? = nil,
+        includeHaptic: Bool = true
+    ) {
         profile?.registerSkip(product: product)
         rerankProducts(profile: profile)
+        promoteToFrontIfPresent(productID: anchoredNextID)
         if includeHaptic {
             Haptic.selection()
         }
     }
 
     func registerSave(_ product: Product, profile: UserPreferenceProfile?, includeHaptic: Bool = true) {
+        let anchoredNextID = product.id == currentProduct?.id ? nextProduct?.id : nil
         profile?.registerSave(product: product)
         rerankProducts(profile: profile)
+        promoteToFrontIfPresent(productID: anchoredNextID)
         if includeHaptic {
             Haptic.success()
         }
@@ -145,5 +166,18 @@ final class DiscoverViewModel: ObservableObject {
             budgetMin: filterOptions.budgetMin,
             budgetMax: filterOptions.budgetMax
         )
+    }
+
+    private func promoteToFrontIfPresent(productID: String?) {
+        guard
+            let productID,
+            let currentIndex = rankedProducts.firstIndex(where: { $0.id == productID }),
+            currentIndex != 0
+        else {
+            return
+        }
+
+        let product = rankedProducts.remove(at: currentIndex)
+        rankedProducts.insert(product, at: 0)
     }
 }
