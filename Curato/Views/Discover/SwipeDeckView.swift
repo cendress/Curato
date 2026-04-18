@@ -23,6 +23,7 @@ struct SwipeDeckView: View {
     @State private var activeDecision: DeckDecision?
     @State private var isAnimatingOut = false
     @State private var displayedNextProduct: Product?
+    @State private var actionControlsRevealProgress: Double = 0
 
     private let swipeThreshold: CGFloat = 110
     private let actionAreaHeight: CGFloat = 112
@@ -49,6 +50,9 @@ struct SwipeDeckView: View {
                             cardHeight: cardHeight,
                             bottomContentInset: actionAreaHeight
                         )
+                        .overlay {
+                            backCardBottomGradient
+                        }
                         .transaction { transaction in
                             transaction.animation = nil
                         }
@@ -99,10 +103,12 @@ struct SwipeDeckView: View {
                 )
                 .onAppear {
                     displayedNextProduct = nextProduct
+                    animateActionControlsIn(fromHidden: true)
                 }
                 .onChange(of: product.id) {
                     resetInteractionState(disableAnimations: true)
                     displayedNextProduct = nextProduct
+                    animateActionControlsIn(fromHidden: true)
                 }
                 .onChange(of: nextProduct?.id) {
                     guard !isInteracting else { return }
@@ -111,6 +117,7 @@ struct SwipeDeckView: View {
                 .onChange(of: isInteracting) { interacting in
                     if !interacting {
                         displayedNextProduct = nextProduct
+                        animateActionControlsIn()
                     }
                 }
             }
@@ -129,20 +136,34 @@ struct SwipeDeckView: View {
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
+    private var backCardBottomGradient: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            actionAreaGradient
+                .frame(height: actionAreaHeight)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .allowsHitTesting(false)
+    }
+
+    private var actionAreaGradient: some View {
+        LinearGradient(
+            colors: [
+                Color.black.opacity(0.5),
+                Color.black.opacity(0.24),
+                Color.black.opacity(0)
+            ],
+            startPoint: .bottom,
+            endPoint: .top
+        )
+        .allowsHitTesting(false)
+    }
+
     private var actionControlsOverlay: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
             ZStack(alignment: .bottom) {
-                LinearGradient(
-                    colors: [
-                        Color.black.opacity(0.5),
-                        Color.black.opacity(0.24),
-                        Color.black.opacity(0)
-                    ],
-                    startPoint: .bottom,
-                    endPoint: .top
-                )
-                .allowsHitTesting(false)
+                actionAreaGradient
 
                 SwipeActionButtons(
                     onPass: { triggerDecision(.pass, source: .actionButton) },
@@ -225,11 +246,25 @@ struct SwipeDeckView: View {
         if activeDecision != nil || isAnimatingOut {
             return 0
         }
-        return 1 - Double(swipeInteractionProgress)
+        return (1 - Double(swipeInteractionProgress)) * actionControlsRevealProgress
     }
 
     private var actionControlsOffsetY: CGFloat {
         CGFloat((1 - actionControlsOpacity) * 24)
+    }
+
+    private func animateActionControlsIn(fromHidden: Bool = false) {
+        if fromHidden {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                actionControlsRevealProgress = 0
+            }
+        }
+
+        withAnimation(.spring(response: 0.36, dampingFraction: 0.88)) {
+            actionControlsRevealProgress = 1
+        }
     }
 
     private var isInteracting: Bool {
@@ -297,6 +332,7 @@ struct SwipeDeckView: View {
                 dragOffset = .zero
                 activeDecision = nil
                 isAnimatingOut = false
+                actionControlsRevealProgress = 0
             }
             return
         }
