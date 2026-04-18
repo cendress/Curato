@@ -50,7 +50,7 @@ struct OnboardingView: View {
                     handlePrimaryAction()
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 24)
+                .padding(.bottom, 34)
             }
         }
         .ignoresSafeArea(edges: .bottom)
