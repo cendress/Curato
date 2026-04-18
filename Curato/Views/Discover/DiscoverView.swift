@@ -51,6 +51,7 @@ struct DiscoverView: View {
                                 selectedProduct = current
                             }
                         )
+                        .zIndex(10)
                     } else {
                         Spacer()
                         EmptyStateView(

@@ -79,7 +79,6 @@ struct SwipeDeckView: View {
                     .zIndex(1)
                 }
                 .frame(width: cardWidth, height: cardHeight, alignment: .topLeading)
-                .clipped()
                 .gesture(
                     DragGesture(minimumDistance: 8)
                         .onChanged { value in
