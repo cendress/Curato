@@ -11,6 +11,14 @@ struct ProductCardView: View {
         min(max(cardHeight * 0.5, 180), 360)
     }
 
+    private var recommendationMaxHeight: CGFloat {
+        min(max(cardHeight * 0.18, 60), 120)
+    }
+
+    private var recommendationMinHeight: CGFloat {
+        min(max(cardHeight * 0.08, 28), 44)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             AsyncImageView(urlString: product.imageURL, height: imageHeight)
@@ -49,10 +57,28 @@ struct ProductCardView: View {
                 }
 
                 if let reason = product.reasonText {
-                    Text(reason)
-                        .font(AppTypography.recommendationReason)
-                        .foregroundStyle(.secondary.opacity(0.9))
-                        .lineLimit(3)
+                    ViewThatFits(in: .vertical) {
+                        Text(reason)
+                            .font(AppTypography.recommendationReason)
+                            .foregroundStyle(.secondary.opacity(0.9))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        ScrollView(.vertical, showsIndicators: false) {
+                            Text(reason)
+                                .font(AppTypography.recommendationReason)
+                                .foregroundStyle(.secondary.opacity(0.9))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .scrollIndicators(.hidden)
+                    }
+                    .frame(
+                        minHeight: recommendationMinHeight,
+                        maxHeight: recommendationMaxHeight,
+                        alignment: .topLeading
+                    )
+                    .layoutPriority(1)
                 }
 
                 if !product.tags.isEmpty {
