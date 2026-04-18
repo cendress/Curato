@@ -51,6 +51,7 @@ struct DiscoverView: View {
                                 selectedProduct = current
                             }
                         )
+                        .padding(.bottom, 26)
                     } else {
                         Spacer()
                         EmptyStateView(

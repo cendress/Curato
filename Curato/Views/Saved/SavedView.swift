@@ -41,29 +41,33 @@ struct SavedView: View {
                             .pickerStyle(.segmented)
                             .padding(.horizontal, 16)
 
-                            ScrollView {
-                                LazyVStack(spacing: 12) {
-                                    ForEach(displayedProducts) { product in
-                                        Button {
-                                            selectedProduct = product.asProduct
-                                        } label: {
-                                            SavedItemCard(
-                                                product: product,
-                                                savedDateText: viewModel.dateLabel(for: product.savedAt)
-                                            )
-                                        }
-                                        .buttonStyle(.plain)
-                                        .contextMenu {
-                                            Button(role: .destructive) {
+                            List {
+                                ForEach(displayedProducts) { product in
+                                    Button {
+                                        selectedProduct = product.asProduct
+                                    } label: {
+                                        SavedItemCard(
+                                            product: product,
+                                            savedDateText: viewModel.dateLabel(for: product.savedAt)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                        Button(role: .destructive) {
+                                            withAnimation(.easeInOut(duration: 0.18)) {
                                                 viewModel.delete(product, profile: profile, from: modelContext)
-                                            } label: {
-                                                Label("Remove", systemImage: "trash")
                                             }
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
                                         }
                                     }
+                                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                                    .listRowSeparator(.hidden)
+                                    .listRowBackground(Color.clear)
                                 }
-                                .padding(16)
                             }
+                            .listStyle(.plain)
+                            .scrollContentBackground(.hidden)
                         }
                     }
                 }
