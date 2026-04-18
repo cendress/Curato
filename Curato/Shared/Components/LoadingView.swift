@@ -1,8 +1,7 @@
 import SwiftUI
 
 struct LoadingView: View {
-    var title: String = "Loading..."
-    var subtitle: String? = "Curating your personalized picks"
+    var title: String = "Curating your picks"
 
     @State private var shouldPulse = false
     @State private var shouldSpin = false
@@ -58,28 +57,12 @@ struct LoadingView: View {
                 .font(AppTypography.navigationLabel.weight(.semibold))
                 .multilineTextAlignment(.center)
 
-            if let subtitle {
-                Text(subtitle)
-                    .font(.footnote)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
-            }
-
             LoadingDots()
                 .padding(.top, 2)
         }
         .foregroundStyle(.primary)
         .padding(.horizontal, 22)
         .padding(.vertical, 24)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.white.opacity(0.72))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.appBorder.opacity(0.28), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.08), radius: 14, y: 10)
         .onAppear {
             guard !didStartAnimations else { return }
             didStartAnimations = true
@@ -127,7 +110,7 @@ private struct LoadingDots: View {
         )
         .ignoresSafeArea()
 
-        LoadingView(title: "Loading your feed")
+        LoadingView(title: "Curating your picks")
             .padding(24)
     }
 }
@@ -137,7 +120,7 @@ private struct LoadingDots: View {
         Color.appBackground
             .ignoresSafeArea()
 
-        LoadingView(title: "Fetching fresh products", subtitle: "Hang tight")
+        LoadingView(title: "Fetching fresh products")
             .padding(24)
     }
 }
