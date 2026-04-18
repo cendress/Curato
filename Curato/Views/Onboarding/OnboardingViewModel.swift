@@ -42,10 +42,8 @@ final class OnboardingViewModel: ObservableObject {
         "Minimal",
         "Streetwear",
         "Date Night",
-        "Clean Basics",
         "Office",
         "Summer",
-        "Soft Masculine",
         "Vintage"
     ]
 
