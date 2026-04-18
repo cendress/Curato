@@ -51,7 +51,6 @@ struct DiscoverView: View {
                                 selectedProduct = current
                             }
                         )
-                        .id(current.id)
                     } else {
                         Spacer()
                         EmptyStateView(

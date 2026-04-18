@@ -70,6 +70,7 @@ struct SwipeDeckView: View {
                 displayedNextProduct = nextProduct
             }
             .onChange(of: product.id) { _ in
+                resetInteractionState(disableAnimations: true)
                 displayedNextProduct = nextProduct
             }
             .onChange(of: nextProduct?.id) { _ in
@@ -222,11 +223,25 @@ struct SwipeDeckView: View {
             }
 
             // If parent state did not replace the card, restore interaction state.
-            dragOffset = .zero
-            activeDecision = nil
-            isAnimatingOut = false
-            displayedNextProduct = nextProduct
+            resetInteractionState(disableAnimations: true)
         }
+    }
+
+    private func resetInteractionState(disableAnimations: Bool) {
+        if disableAnimations {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                dragOffset = .zero
+                activeDecision = nil
+                isAnimatingOut = false
+            }
+            return
+        }
+
+        dragOffset = .zero
+        activeDecision = nil
+        isAnimatingOut = false
     }
 }
 
