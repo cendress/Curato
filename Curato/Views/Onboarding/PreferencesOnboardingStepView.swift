@@ -6,7 +6,6 @@ struct PreferencesOnboardingStepView: View {
     private let categoryColumns = [GridItem(.adaptive(minimum: 120), spacing: 10)]
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Set a few preferences")
@@ -104,10 +103,11 @@ struct PreferencesOnboardingStepView: View {
                                 .fill(Color.white.opacity(0.92))
                         )
                 }
+                
+                Spacer()
             }
             .padding(.top, 10)
             .padding(.bottom, 20)
-        }
     }
 }
 
