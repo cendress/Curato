@@ -20,19 +20,27 @@ struct SwipeDeckView: View {
     @State private var displayedNextProduct: Product?
 
     private let swipeThreshold: CGFloat = 110
+    private let actionAreaHeight: CGFloat = 112
 
     var body: some View {
         VStack(spacing: 16) {
             ZStack(alignment: .bottomLeading) {
                 if let displayedNextProduct {
-                    ProductCardView(product: displayedNextProduct)
+                    ProductCardView(
+                        product: displayedNextProduct,
+                        bottomContentInset: actionAreaHeight
+                    )
                         .transaction { transaction in
                             transaction.animation = nil
                         }
                         .allowsHitTesting(false)
                 }
 
-                ProductCardView(product: product, isOpaque: true)
+                ProductCardView(
+                    product: product,
+                    isOpaque: true,
+                    bottomContentInset: actionAreaHeight
+                )
                     .overlay {
                         cardOverlayChrome
                     }
@@ -95,38 +103,34 @@ struct SwipeDeckView: View {
     }
 
     private var actionControlsOverlay: some View {
-        GeometryReader { geometry in
-            let gradientHeight = max(geometry.size.height * 0.22, 110)
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            ZStack(alignment: .bottom) {
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0.5),
+                        Color.black.opacity(0.24),
+                        Color.black.opacity(0)
+                    ],
+                    startPoint: .bottom,
+                    endPoint: .top
+                )
+                .allowsHitTesting(false)
 
-            VStack(spacing: 0) {
-                Spacer(minLength: 0)
-                ZStack(alignment: .bottom) {
-                    LinearGradient(
-                        colors: [
-                            Color.black.opacity(0.5),
-                            Color.black.opacity(0.24),
-                            Color.black.opacity(0)
-                        ],
-                        startPoint: .bottom,
-                        endPoint: .top
-                    )
-                    .allowsHitTesting(false)
-
-                    SwipeActionButtons(
-                        onPass: { triggerDecision(.pass) },
-                        onSave: { triggerDecision(.save) },
-                        onLike: { triggerDecision(.like) }
-                    )
-                    .padding(.bottom, 14)
-                    .padding(.horizontal, 18)
-                    .opacity(actionControlsOpacity)
-                    .offset(y: actionControlsOffsetY)
-                    .scaleEffect(0.98 + (CGFloat(actionControlsOpacity) * 0.02))
-                    .animation(.easeOut(duration: 0.15), value: actionControlsOpacity)
-                    .allowsHitTesting(actionControlsOpacity > 0.05 && !isAnimatingOut)
-                }
-                .frame(height: gradientHeight)
+                SwipeActionButtons(
+                    onPass: { triggerDecision(.pass) },
+                    onSave: { triggerDecision(.save) },
+                    onLike: { triggerDecision(.like) }
+                )
+                .padding(.bottom, 14)
+                .padding(.horizontal, 18)
+                .opacity(actionControlsOpacity)
+                .offset(y: actionControlsOffsetY)
+                .scaleEffect(0.98 + (CGFloat(actionControlsOpacity) * 0.02))
+                .animation(.easeOut(duration: 0.15), value: actionControlsOpacity)
+                .allowsHitTesting(actionControlsOpacity > 0.05 && !isAnimatingOut)
             }
+            .frame(height: actionAreaHeight)
         }
     }
 

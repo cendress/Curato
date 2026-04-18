@@ -3,6 +3,7 @@ import SwiftUI
 struct ProductCardView: View {
     let product: Product
     var isOpaque: Bool = false
+    var bottomContentInset: CGFloat = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -43,10 +44,34 @@ struct ProductCardView: View {
                     Text(reason)
                         .font(AppTypography.recommendationReason)
                         .foregroundStyle(.secondary.opacity(0.9))
-                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if !product.tags.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(Array(product.tags.prefix(12)), id: \.self) { tag in
+                                Text(tag.capitalized)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.primary.opacity(0.9))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        Capsule(style: .continuous)
+                                            .fill(Color.appSurface.opacity(0.92))
+                                    )
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
                 }
             }
             .padding(.horizontal, 4)
+
+            if bottomContentInset > 0 {
+                Color.clear
+                    .frame(height: bottomContentInset)
+            }
         }
         .padding(16)
         .background(

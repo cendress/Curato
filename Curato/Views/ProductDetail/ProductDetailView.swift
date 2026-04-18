@@ -84,11 +84,21 @@ struct ProductDetailView: View {
                                 FlowTagList(tags: product.tags)
                             }
 
-                            if let sourceURL = product.productURL {
-                                Text(sourceURL)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                                    .textSelection(.enabled)
+                            if let url = validatedProductURL {
+                                Button {
+                                    openURL(url)
+                                } label: {
+                                    Label("Open on web", systemImage: "arrow.up.right.square")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Color.appAccent)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(
+                                            Capsule(style: .continuous)
+                                                .fill(Color.white.opacity(0.9))
+                                        )
+                                }
+                                .buttonStyle(.plain)
                             }
 
                             if let statusMessage {
@@ -156,25 +166,6 @@ struct ProductDetailView: View {
         .padding(.top, 10)
         .padding(.bottom, 10)
         .background(.ultraThinMaterial)
-        .overlay(alignment: .topTrailing) {
-            if let url = validatedProductURL {
-                Button {
-                    openURL(url)
-                } label: {
-                    Label("Open", systemImage: "arrow.up.right.square")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.appAccent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(Color.white.opacity(0.9))
-                        )
-                }
-                .padding(.trailing, 18)
-                .padding(.top, 8)
-            }
-        }
     }
 
     private var validatedProductURL: URL? {
@@ -277,14 +268,17 @@ private struct FlowTagList: View {
     let tags: [String]
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 8)], spacing: 8) {
-            ForEach(tags.prefix(12), id: \.self) { tag in
-                Text(tag.capitalized)
-                    .font(.caption.weight(.semibold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(Color.appSurface.opacity(0.95)))
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(tags.prefix(12), id: \.self) { tag in
+                    Text(tag.capitalized)
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(Color.appSurface.opacity(0.95)))
+                }
             }
+            .padding(.vertical, 2)
         }
     }
 }
