@@ -17,22 +17,26 @@ struct RootView: View {
     }
 
     var body: some View {
-        Group {
+        ZStack {
             if let activeSession {
                 if activeSession.hasCompletedOnboarding {
                     MainTabView(session: activeSession)
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
                 } else {
                     OnboardingView(session: activeSession, profile: activeProfile)
+                        .transition(.move(edge: .leading).combined(with: .opacity))
                 }
             } else {
                 LoadingView(title: "Preparing your personalized feed...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.appBackground)
+                    .transition(.opacity)
             }
         }
         .task {
             seedInitialStateIfNeeded()
         }
+        .animation(.snappy(duration: 0.55, extraBounce: 0.03), value: activeSession?.hasCompletedOnboarding)
     }
 
     private func seedInitialStateIfNeeded() {
