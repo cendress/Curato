@@ -2,12 +2,20 @@ import SwiftUI
 
 struct ProductCardView: View {
     let product: Product
+    let cardWidth: CGFloat
+    let cardHeight: CGFloat
     var isOpaque: Bool = false
     var bottomContentInset: CGFloat = 0
 
+    private var imageHeight: CGFloat {
+        min(max(cardHeight * 0.5, 180), 360)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            AsyncImageView(urlString: product.imageURL, height: 360)
+            AsyncImageView(urlString: product.imageURL, height: imageHeight)
+                .frame(maxWidth: .infinity)
+                .clipped()
 
             VStack(alignment: .leading, spacing: 10) {
                 Text(product.merchant)
@@ -44,7 +52,7 @@ struct ProductCardView: View {
                     Text(reason)
                         .font(AppTypography.recommendationReason)
                         .foregroundStyle(.secondary.opacity(0.9))
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(3)
                 }
 
                 if !product.tags.isEmpty {
@@ -66,7 +74,10 @@ struct ProductCardView: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 4)
+
+            Spacer(minLength: 0)
 
             if bottomContentInset > 0 {
                 Color.clear
@@ -74,10 +85,12 @@ struct ProductCardView: View {
             }
         }
         .padding(16)
+        .frame(width: cardWidth, height: cardHeight, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color.white.opacity(isOpaque ? 1 : 0.84))
         )
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(Color.appBorder.opacity(0.4), lineWidth: 1)
@@ -87,7 +100,11 @@ struct ProductCardView: View {
 }
 
 #Preview {
-    ProductCardView(product: Product.mockDeck[0])
+    ProductCardView(
+        product: Product.mockDeck[0],
+        cardWidth: 340,
+        cardHeight: 560
+    )
         .padding()
         .background(Color.appBackground)
 }

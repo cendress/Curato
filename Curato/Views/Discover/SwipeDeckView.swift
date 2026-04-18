@@ -26,6 +26,8 @@ struct SwipeDeckView: View {
 
     private let swipeThreshold: CGFloat = 110
     private let actionAreaHeight: CGFloat = 112
+    private let deckTopInset: CGFloat = 12
+    private let deckBottomInset: CGFloat = 20
 
     private struct OverlayStyle {
         let color: Color
@@ -34,24 +36,32 @@ struct SwipeDeckView: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
-            ZStack(alignment: .bottomLeading) {
-                if let displayedNextProduct {
-                    ProductCardView(
-                        product: displayedNextProduct,
-                        bottomContentInset: actionAreaHeight
-                    )
+        GeometryReader { geometry in
+            let cardWidth = geometry.size.width
+            let cardHeight = max(0, geometry.size.height - deckTopInset - deckBottomInset)
+
+            VStack(spacing: 0) {
+                ZStack(alignment: .bottomLeading) {
+                    if let displayedNextProduct {
+                        ProductCardView(
+                            product: displayedNextProduct,
+                            cardWidth: cardWidth,
+                            cardHeight: cardHeight,
+                            bottomContentInset: actionAreaHeight
+                        )
                         .transaction { transaction in
                             transaction.animation = nil
                         }
                         .allowsHitTesting(false)
-                }
+                    }
 
-                ProductCardView(
-                    product: product,
-                    isOpaque: true,
-                    bottomContentInset: actionAreaHeight
-                )
+                    ProductCardView(
+                        product: product,
+                        cardWidth: cardWidth,
+                        cardHeight: cardHeight,
+                        isOpaque: true,
+                        bottomContentInset: actionAreaHeight
+                    )
                     .overlay {
                         cardOverlayChrome
                     }
@@ -63,44 +73,50 @@ struct SwipeDeckView: View {
                         onOpenDetail()
                     }
                     .zIndex(1)
-            }
-            .gesture(
-                DragGesture(minimumDistance: 8)
-                    .onChanged { value in
-                        guard !isAnimatingOut else { return }
-                        dragOffset = value.translation
-                    }
-                    .onEnded { value in
-                        guard !isAnimatingOut else { return }
-                        let horizontalOffset = value.translation.width
-                        if horizontalOffset <= -swipeThreshold {
-                            triggerDecision(.pass, source: .gesture)
-                        } else if horizontalOffset >= swipeThreshold {
-                            triggerDecision(.like, source: .gesture)
-                        } else {
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) {
-                                dragOffset = .zero
-                                activeDecision = nil
+                }
+                .frame(width: cardWidth, height: cardHeight, alignment: .topLeading)
+                .clipped()
+                .gesture(
+                    DragGesture(minimumDistance: 8)
+                        .onChanged { value in
+                            guard !isAnimatingOut else { return }
+                            dragOffset = value.translation
+                        }
+                        .onEnded { value in
+                            guard !isAnimatingOut else { return }
+                            let horizontalOffset = value.translation.width
+                            if horizontalOffset <= -swipeThreshold {
+                                triggerDecision(.pass, source: .gesture)
+                            } else if horizontalOffset >= swipeThreshold {
+                                triggerDecision(.like, source: .gesture)
+                            } else {
+                                withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) {
+                                    dragOffset = .zero
+                                    activeDecision = nil
+                                }
                             }
                         }
-                    }
-            )
-            .onAppear {
-                displayedNextProduct = nextProduct
-            }
-            .onChange(of: product.id) {
-                resetInteractionState(disableAnimations: true)
-                displayedNextProduct = nextProduct
-            }
-            .onChange(of: nextProduct?.id) {
-                guard !isInteracting else { return }
-                displayedNextProduct = nextProduct
-            }
-            .onChange(of: isInteracting) { interacting in
-                if !interacting {
+                )
+                .onAppear {
                     displayedNextProduct = nextProduct
                 }
+                .onChange(of: product.id) {
+                    resetInteractionState(disableAnimations: true)
+                    displayedNextProduct = nextProduct
+                }
+                .onChange(of: nextProduct?.id) {
+                    guard !isInteracting else { return }
+                    displayedNextProduct = nextProduct
+                }
+                .onChange(of: isInteracting) { interacting in
+                    if !interacting {
+                        displayedNextProduct = nextProduct
+                    }
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.top, deckTopInset)
+            .padding(.bottom, deckBottomInset)
         }
     }
 
