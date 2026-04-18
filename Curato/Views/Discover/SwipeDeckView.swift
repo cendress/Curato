@@ -22,6 +22,12 @@ struct SwipeDeckView: View {
     private let swipeThreshold: CGFloat = 110
     private let actionAreaHeight: CGFloat = 112
 
+    private struct OverlayStyle {
+        let color: Color
+        let iconName: String
+        let badgeAlignment: Alignment
+    }
+
     var body: some View {
         VStack(spacing: 16) {
             ZStack(alignment: .bottomLeading) {
@@ -137,31 +143,35 @@ struct SwipeDeckView: View {
     @ViewBuilder
     private var swipeOverlay: some View {
         if let style = overlayStyle {
-            ZStack(alignment: .bottomLeading) {
+            ZStack {
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(style.color.opacity(overlayOpacity))
 
-                VStack(alignment: .leading, spacing: 6) {
+                GeometryReader { proxy in
                     Image(systemName: style.iconName)
-                        .font(.title3.weight(.black))
-                    Text(style.label)
-                        .font(.caption.weight(.semibold))
+                        .font(.system(size: 34, weight: .black))
+                        .foregroundStyle(.white)
+                        .frame(width: 92, height: 92)
+                        .background(
+                            Circle()
+                                .fill(Color.black.opacity(0.16))
+                        )
+                        .overlay(
+                            Circle()
+                                .stroke(Color.white.opacity(0.94), lineWidth: 3)
+                        )
+                        .shadow(color: .black.opacity(0.22), radius: 8, y: 4)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: style.badgeAlignment)
+                        .padding(.horizontal, 24)
+                        .padding(.top, max(24, proxy.size.height * 0.14))
                 }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.black.opacity(0.22))
-                )
-                .padding(18)
             }
             .allowsHitTesting(false)
             .animation(.easeOut(duration: 0.12), value: overlayOpacity)
         }
     }
 
-    private var overlayStyle: (color: Color, iconName: String, label: String)? {
+    private var overlayStyle: OverlayStyle? {
         if let activeDecision {
             return style(for: activeDecision)
         }
@@ -179,9 +189,11 @@ struct SwipeDeckView: View {
 
     private var overlayOpacity: Double {
         if activeDecision != nil {
-            return 0.4
+            return 0.46
         }
-        return min(Double(abs(dragOffset.width) / swipeThreshold), 0.42)
+
+        let progress = min(Double(abs(dragOffset.width) / swipeThreshold), 1)
+        return min(pow(progress, 1.35) * 0.42, 0.42)
     }
 
     private var swipeInteractionProgress: CGFloat {
@@ -206,14 +218,14 @@ struct SwipeDeckView: View {
             || abs(dragOffset.height) > 0.5
     }
 
-    private func style(for decision: DeckDecision) -> (color: Color, iconName: String, label: String) {
+    private func style(for decision: DeckDecision) -> OverlayStyle {
         switch decision {
         case .pass:
-            return (.red, "xmark", "PASS")
+            return OverlayStyle(color: .red, iconName: "xmark", badgeAlignment: .topTrailing)
         case .save:
-            return (.blue, "bookmark.fill", "SAVED")
+            return OverlayStyle(color: .blue, iconName: "bookmark.fill", badgeAlignment: .top)
         case .like:
-            return (.green, "heart.fill", "LIKE")
+            return OverlayStyle(color: .green, iconName: "heart.fill", badgeAlignment: .topLeading)
         }
     }
 
