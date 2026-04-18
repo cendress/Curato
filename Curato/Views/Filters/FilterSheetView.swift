@@ -38,7 +38,7 @@ struct FilterSheetView: View {
                         }
 
                         sectionCard(title: "Vibe") {
-                            TextField("Minimal spring outfits for NYC under $150", text: $viewModel.workingOptions.vibeText)
+                            TextField("Minimal spring outfits", text: $viewModel.workingOptions.vibeText)
                                 .focused($focusedField, equals: .vibe)
                                 .textInputAutocapitalization(.sentences)
                                 .padding(12)
