@@ -43,11 +43,7 @@ struct SavedItemCard: View {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(0.78))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.appBorder.opacity(0.35), lineWidth: 1)
+                .fill(.ultraThinMaterial)
         )
         .shadow(color: .black.opacity(0.07), radius: 12, y: 8)
     }

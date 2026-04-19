@@ -114,13 +114,9 @@ struct ProductCardView: View {
         .frame(width: cardWidth, height: cardHeight, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.white.opacity(isOpaque ? 1 : 0.84))
+                .fill(.ultraThinMaterial)
         )
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.appBorder.opacity(0.4), lineWidth: 1)
-        )
         .shadow(color: .black.opacity(0.08), radius: 16, y: 12)
     }
 }
