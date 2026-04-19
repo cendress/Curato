@@ -34,7 +34,6 @@ struct DiscoverView: View {
                     } else if let current = viewModel.currentProduct {
                         SwipeDeckView(
                             product: current,
-                            nextProduct: viewModel.nextProduct,
                             onPass: {
                                 viewModel.skipCurrent(profile: profile)
                                 saveContext()

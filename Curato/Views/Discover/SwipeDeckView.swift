@@ -13,7 +13,6 @@ struct SwipeDeckView: View {
     }
 
     let product: Product
-    let nextProduct: Product?
     var onPass: () -> Void
     var onSave: () -> Void
     var onLike: () -> Void
@@ -24,14 +23,12 @@ struct SwipeDeckView: View {
     @State private var isAnimatingOut = false
     @State private var animatingProductID: String?
     @State private var isAwaitingDeckSwap = false
-    @State private var displayedNextProduct: Product?
-    @State private var actionControlsRevealProgress: Double = 0
+    @State private var actionControlsRevealProgress: Double = 1
 
     private let swipeThreshold: CGFloat = 110
     private let actionAreaHeight: CGFloat = 112
     private let deckTopInset: CGFloat = 12
     private let deckBottomInset: CGFloat = 20
-    private let actionControlsTransitionAnimation = Animation.easeOut(duration: 0.15)
 
     private struct OverlayStyle {
         let color: Color
@@ -46,22 +43,6 @@ struct SwipeDeckView: View {
 
             VStack(spacing: 0) {
                 ZStack(alignment: .bottomLeading) {
-                    if let displayedNextProduct {
-                        ProductCardView(
-                            product: displayedNextProduct,
-                            cardWidth: cardWidth,
-                            cardHeight: cardHeight,
-                            bottomContentInset: actionAreaHeight
-                        )
-                        .overlay {
-                            backCardBottomGradient
-                        }
-                        .transaction { transaction in
-                            transaction.animation = nil
-                        }
-                        .allowsHitTesting(false)
-                    }
-
                     ProductCardView(
                         product: product,
                         cardWidth: cardWidth,
@@ -104,28 +85,12 @@ struct SwipeDeckView: View {
                         }
                 )
                 .onAppear {
-                    displayedNextProduct = nextProduct
                     animatingProductID = nil
                     isAwaitingDeckSwap = false
-                    animateActionControlsIn(fromHidden: true)
                 }
                 .onChange(of: product.id) {
                     resetInteractionState(disableAnimations: true)
-                    displayedNextProduct = nextProduct
                     isAwaitingDeckSwap = false
-                    animateActionControlsIn(fromHidden: true)
-                }
-                .onChange(of: nextProduct?.id) {
-                    guard !isInteracting, !isAwaitingDeckSwap else { return }
-                    displayedNextProduct = nextProduct
-                }
-                .onChange(of: isInteracting) { interacting in
-                    if !interacting {
-                        if !isAwaitingDeckSwap {
-                            displayedNextProduct = nextProduct
-                        }
-                        animateActionControlsIn()
-                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -141,16 +106,6 @@ struct SwipeDeckView: View {
             actionControlsOverlay
         }
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-    }
-
-    private var backCardBottomGradient: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 0)
-            actionAreaGradient
-                .frame(height: actionAreaHeight)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .allowsHitTesting(false)
     }
 
     private var actionAreaGradient: some View {
@@ -182,7 +137,7 @@ struct SwipeDeckView: View {
                 .opacity(actionControlsOpacity)
                 .offset(y: actionControlsOffsetY)
                 .scaleEffect(0.98 + (CGFloat(actionControlsOpacity) * 0.02))
-                .animation(actionControlsTransitionAnimation, value: actionControlsOpacity)
+                .animation(.easeOut(duration: 0.15), value: actionControlsOpacity)
                 .allowsHitTesting(actionControlsOpacity > 0.05 && !isCurrentCardAnimatingOut)
             }
             .frame(height: actionAreaHeight)
@@ -277,13 +232,6 @@ struct SwipeDeckView: View {
         CGFloat((1 - actionControlsOpacity) * 24)
     }
 
-    private var isInteracting: Bool {
-        isCurrentCardAnimatingOut
-            || effectiveActiveDecision != nil
-            || abs(effectiveDragOffset.width) > 0.5
-            || abs(effectiveDragOffset.height) > 0.5
-    }
-
     private func style(for decision: DeckDecision) -> OverlayStyle {
         switch decision {
         case .pass:
@@ -298,7 +246,9 @@ struct SwipeDeckView: View {
     private func triggerDecision(_ decision: DeckDecision, source: DecisionTriggerSource) {
         guard !isCurrentCardAnimatingOut else { return }
 
-        animatingProductID = product.id
+        let swipedProductID = product.id
+
+        animatingProductID = swipedProductID
         isAnimatingOut = true
         activeDecision = decision
         isAwaitingDeckSwap = true
@@ -331,8 +281,12 @@ struct SwipeDeckView: View {
                 onLike()
             }
 
-            // If parent state did not replace the card, restore interaction state.
-            resetInteractionState(disableAnimations: true)
+            // Only reset immediately if the deck did not advance to a new top card.
+            // This prevents the old card from snapping back on-screen for a frame.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                guard product.id == swipedProductID else { return }
+                resetInteractionState(disableAnimations: true)
+            }
         }
     }
 
@@ -346,7 +300,7 @@ struct SwipeDeckView: View {
                 isAnimatingOut = false
                 animatingProductID = nil
                 isAwaitingDeckSwap = false
-                actionControlsRevealProgress = 0
+                actionControlsRevealProgress = 1
             }
             return
         }
@@ -357,27 +311,11 @@ struct SwipeDeckView: View {
         animatingProductID = nil
         isAwaitingDeckSwap = false
     }
-
-    private func animateActionControlsIn(fromHidden: Bool = false) {
-        if fromHidden {
-            var transaction = Transaction()
-            transaction.disablesAnimations = true
-            withTransaction(transaction) {
-                actionControlsRevealProgress = 0
-            }
-        }
-
-        withAnimation(actionControlsTransitionAnimation) {
-            actionControlsRevealProgress = 1
-        }
-    }
-
 }
 
 #Preview {
     SwipeDeckView(
         product: Product.mockDeck[0],
-        nextProduct: Product.mockDeck[1],
         onPass: {},
         onSave: {},
         onLike: {},
