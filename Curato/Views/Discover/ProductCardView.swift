@@ -92,7 +92,7 @@ struct ProductCardView: View {
                                     .padding(.vertical, 6)
                                     .background(
                                         Capsule(style: .continuous)
-                                            .fill(Color.appSurface.opacity(0.92))
+                                            .fill(.ultraThinMaterial)
                                     )
                             }
                         }

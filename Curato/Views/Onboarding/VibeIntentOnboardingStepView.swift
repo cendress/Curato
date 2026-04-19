@@ -45,7 +45,7 @@ struct VibeIntentOnboardingStepView: View {
                 .padding(14)
                 .background(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.white.opacity(0.92))
+                        .fill(.ultraThinMaterial)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)

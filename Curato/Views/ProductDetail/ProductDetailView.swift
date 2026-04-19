@@ -95,7 +95,7 @@ struct ProductDetailView: View {
                                         .padding(.vertical, 8)
                                         .background(
                                             Capsule(style: .continuous)
-                                                .fill(Color.white.opacity(0.9))
+                                                .fill(.ultraThinMaterial)
                                         )
                                 }
                                 .buttonStyle(.plain)
@@ -144,7 +144,7 @@ struct ProductDetailView: View {
                     .padding(.vertical, 14)
                     .background(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(Color.white.opacity(0.88))
+                            .fill(.ultraThinMaterial)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -275,7 +275,7 @@ private struct FlowTagList: View {
                         .font(.caption.weight(.semibold))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(Capsule().fill(Color.appSurface.opacity(0.95)))
+                        .background(Capsule().fill(.ultraThinMaterial))
                 }
             }
             .padding(.vertical, 2)

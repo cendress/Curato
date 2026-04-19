@@ -41,7 +41,7 @@ struct SwipeActionButtons: View {
                 .frame(width: size, height: size)
                 .background(
                     Circle()
-                        .fill(Color.white.opacity(0.95))
+                        .fill(.ultraThinMaterial)
                 )
                 .overlay(
                     Circle()
